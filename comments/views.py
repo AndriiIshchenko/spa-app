@@ -1,8 +1,16 @@
-from rest_framework import mixins
+from rest_framework import mixins, status
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.decorators import action
 
 from comments.models import Comment
-from comments.serializers import CommentSerializer
+from comments.serializers import (
+    CommentDetailSerializer,
+    CommentSerializer,
+    CommentListSerializer,
+)
+
 
 class CommentViewSet(
     mixins.ListModelMixin,
@@ -22,6 +30,7 @@ class CommentViewSet(
         if self.action == "list":
             queryset = self.queryset.filter(parent_comment__isnull=True)
         return queryset
+    
     def get_serializer_class(self):
         if self.action == "list":
             return CommentListSerializer
@@ -45,3 +54,6 @@ class CommentViewSet(
         )
         serializer = self.get_serializer(replie)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
