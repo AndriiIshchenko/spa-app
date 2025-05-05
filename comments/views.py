@@ -15,3 +15,4 @@ class CommentViewSet(
 
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticated,)
