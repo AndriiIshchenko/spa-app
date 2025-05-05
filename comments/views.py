@@ -17,6 +17,11 @@ class CommentViewSet(
     serializer_class = CommentSerializer
     permission_classes = (IsAuthenticated,)
 
+    def get_queryset(self):
+        queryset = self.queryset
+        if self.action == "list":
+            queryset = self.queryset.filter(parent_comment__isnull=True)
+        return queryset
     def get_serializer_class(self):
         if self.action == "list":
             return CommentListSerializer
