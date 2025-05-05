@@ -23,3 +23,20 @@ class CommentViewSet(
         if self.action == "retrieve":
             return CommentDetailSerializer
         return CommentSerializer
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="replie",
+        permission_classes=(IsAuthenticated,),
+    )
+    def replie(self, request, pk=None):
+        parent_comment = self.get_object()
+        user = request.user
+        replie = Comment.objects.create(
+            user=user,
+            parent_comment=parent_comment,
+            content=request.data.get("content"),
+        )
+        serializer = self.get_serializer(replie)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
