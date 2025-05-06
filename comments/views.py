@@ -1,9 +1,10 @@
 from rest_framework import mixins, status
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import action
 
+from comments.permissions import CommentOwner
 from comments.models import Comment
 from comments.serializers import (
     CommentDetailSerializer,
@@ -23,14 +24,22 @@ class CommentViewSet(
 
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthenticated,)
+
+    def get_permissions(self):
+        if self.action in ["create", "replie"]:
+            return [IsAuthenticated()]
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), CommentOwner()]
+        if self.action in ["list", "retrieve"]:
+            return [AllowAny()]
+        return super().get_permissions()
 
     def get_queryset(self):
         queryset = self.queryset
         if self.action == "list":
             queryset = self.queryset.filter(parent_comment__isnull=True)
         return queryset
-    
+
     def get_serializer_class(self):
         if self.action == "list":
             return CommentListSerializer
