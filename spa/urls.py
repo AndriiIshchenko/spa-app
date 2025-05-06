@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
@@ -24,22 +25,36 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework.permissions import AllowAny
+from rest_framework.authentication import BasicAuthentication
+from rest_framework.decorators import permission_classes, authentication_classes
+from rest_framework.views import APIView
+
+
+class PublicSwaggerView(SpectacularSwaggerView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+
+class PublicRedocView(SpectacularRedocView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
     path("api/comments/", include("comments.urls", namespace="comments")),
     path("api/user/", include("users.urls", namespace="user")),
-    path("__debug__/", include("debug_toolbar.urls")),
+    # path("__debug__/", include("debug_toolbar.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
-        "api/doc/swagger/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
+        "api/doc/",
+        PublicSwaggerView.as_view(url_name="schema"),
         name="swagger-ui",
     ),
     path(
         "api/doc/redoc/",
-        SpectacularRedocView.as_view(url_name="schema"),
+        PublicRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
