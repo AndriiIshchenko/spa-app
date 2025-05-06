@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
 
 from comments.models import Comment
 
@@ -32,8 +33,31 @@ class CommentListSerializer(serializers.ModelSerializer):
 
 class CommentDetailSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(many=False, read_only=True, slug_field="email")
-    replies = CommentListSerializer(many=True, read_only=True)
+    replies = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ("id", "parent_comment", "user", "content", "created_at", "replies")
+
+    def get_replies(self, obj):
+        # Get the request object
+        request = self.context.get("request")
+
+        # Paginate the replies queryset
+        paginator = PageNumberPagination() #LimitOffsetPagination()
+        replies_queryset = obj.replies.all()  # Get all replies for the comment
+        paginated_replies = paginator.paginate_queryset(replies_queryset, request)
+
+        # Serialize the paginated replies
+        serializer = CommentListSerializer(
+            paginated_replies, many=True, context={"request": request}
+        )
+        
+        return paginator.get_paginated_response(serializer.data).data
+       
+        # return {
+        #     "count": paginator.count,
+        #     "next": paginator.get_next_link(),
+        #     "previous": paginator.get_previous_link(),
+        #     "results": serializer.data,
+        # }

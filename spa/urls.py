@@ -26,10 +26,6 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 from rest_framework.permissions import AllowAny
-from rest_framework.authentication import BasicAuthentication
-from rest_framework.decorators import permission_classes, authentication_classes
-from rest_framework.views import APIView
-
 
 class PublicSwaggerView(SpectacularSwaggerView):
     permission_classes = [AllowAny]
