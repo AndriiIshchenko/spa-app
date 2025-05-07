@@ -46,7 +46,14 @@ class CommentDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ("id", "parent_comment", "user_profile", "content", "created_at", "replies")
+        fields = (
+            "id",
+            "parent_comment",
+            "user_profile",
+            "content",
+            "created_at",
+            "replies",
+        )
 
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_replies(self, obj):
