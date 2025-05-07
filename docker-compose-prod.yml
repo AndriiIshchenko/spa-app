@@ -36,7 +36,7 @@ services:
     restart: always
     build: .
     container_name: backend_spa
-    command: gunicorn spa.wsgi:application --bind 0.0.0.0:8000 --reload
+    command: gunicorn spa.wsgi:application --bind 0.0.0.0:8000
     env_file:
       - .env
     environment:
