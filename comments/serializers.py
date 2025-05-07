@@ -1,7 +1,7 @@
 from rest_framework import serializers
-from rest_framework.pagination import LimitOffsetPagination, PageNumberPagination
+from rest_framework.pagination import PageNumberPagination
 
-from comments.models import Comment
+from comments.models import Comment, UserProfile
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -44,7 +44,7 @@ class CommentDetailSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
 
         # Paginate the replies queryset
-        paginator = PageNumberPagination() #LimitOffsetPagination()
+        paginator = PageNumberPagination()  # LimitOffsetPagination()
         replies_queryset = obj.replies.all()  # Get all replies for the comment
         paginated_replies = paginator.paginate_queryset(replies_queryset, request)
 
@@ -52,12 +52,64 @@ class CommentDetailSerializer(serializers.ModelSerializer):
         serializer = CommentListSerializer(
             paginated_replies, many=True, context={"request": request}
         )
-        
+
         return paginator.get_paginated_response(serializer.data).data
-       
-        # return {
-        #     "count": paginator.count,
-        #     "next": paginator.get_next_link(),
-        #     "previous": paginator.get_previous_link(),
-        #     "results": serializer.data,
-        # }
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ("id", "user", "nickname", "bio", "birth_date")
+        read_only_fields = ("id", "user")
+
+
+class UserProfileListSerializer(serializers.ModelSerializer):
+    comments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = ("id", "nickname", "user", "photo", "comments")
+
+    def get_commentss(self, obj) -> int:
+        return obj.comments.count()
+
+
+class UserProfileDetailSerializer(serializers.ModelSerializer):
+    comments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = [
+            "id",
+            "user",
+            "nickname",
+            "bio",
+            "photo",
+            "birth_date",
+            "comments",
+        ]
+
+    def get_comments(self, obj) -> list[str]:
+
+        comments = obj.comments.all()
+        if not comments:
+            return []
+        all_comments = []
+        for comment in comments:
+            if comment.parent_comment:
+                all_comments.append(
+                    f"{comment.parent_comment.user_profile.nickname}"
+                    f"posted: '{comment.parent_comment_content[0:30]}'."
+                    f"Your comment: '{comment.content[:30]}'"
+                )
+            else:
+                all_comments.append(
+                    f"{comment.user_profile.nickname} posted: '{comment.content[:30]}'."
+                )
+        return all_comments
+
+
+class UserProfileImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserProfile
+        fields = ["id", "photo"]

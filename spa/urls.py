@@ -39,7 +39,7 @@ class PublicRedocView(SpectacularRedocView):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/comments/", include("comments.urls", namespace="comments")),
+    path("api/spa/", include("comments.urls", namespace="comments")),
     path("api/user/", include("users.urls", namespace="user")),
     # path("__debug__/", include("debug_toolbar.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

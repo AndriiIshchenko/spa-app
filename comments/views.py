@@ -3,16 +3,21 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 
 
 from comments.permissions import CommentOwner
-from comments.models import Comment
+from comments.models import Comment, UserProfile
 from comments.serializers import (
     CommentDetailSerializer,
     CommentSerializer,
     CommentListSerializer,
+    UserProfileDetailSerializer,
+    UserProfileImageSerializer,
+    UserProfileListSerializer,
+    UserProfileSerializer,
 )
 
 
@@ -87,3 +92,93 @@ class CommentViewSet(
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
+
+
+class CreateProfile(
+    mixins.CreateModelMixin,
+    GenericViewSet,
+):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+    # permission_classes = (IsAuthenticated,)
+
+    def perform_create(self, serializer):
+        if UserProfile.objects.filter(user=self.request.user).exists():
+            raise ValidationError("User already has profile")
+        serializer.save(user=self.request.user)
+
+
+class UserProfileViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet,
+):
+    queryset = (
+        UserProfile.objects.all()
+        .select_related(
+            "user",
+        )
+        .prefetch_related(
+            "posts__comments",
+            "user__likes__post",
+            "following",
+            "followers",
+        )
+    )
+    serializer_class = UserProfileSerializer
+
+
+    def get_permissions(self):
+        if self.action in ["create","list", "retrieve"]:
+            return [IsAuthenticated()]
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [IsAuthenticated(), CommentOwner()]
+        return super().get_permissions()
+
+
+    def get_queryset(self):
+        """Retrieve the user's profiles with filter"""
+        queryset = self.queryset
+
+        nickname = self.request.query_params.get("nickname")
+        if nickname:
+            queryset = queryset.filter(nickname__icontains=nickname)
+
+        return queryset.distinct()
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return UserProfileListSerializer
+        if self.action == "retrieve":
+            return UserProfileDetailSerializer
+        if self.action == "upload_image":
+            return UserProfileImageSerializer
+        return UserProfileSerializer
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+    )
+    def upload_image(self, request, pk=None):
+        profile = self.get_object()
+        serializer = self.get_serializer(profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="nickname",
+                description="Filter by nickname (ex. ?nickname=alice)",
+                required=False,
+                type=OpenApiTypes.STR,
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
