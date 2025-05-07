@@ -29,7 +29,7 @@ class UserProfile(models.Model):
 
 def comment_image_path(instance, filename) -> str:
     _, extention = os.path.splitext(filename)
-    filename = f"{slugify(instance.user)}-{uuid.uuid4()}{extention}"
+    filename = f"{slugify(instance.user_profile)}-{uuid.uuid4()}{extention}"
     return os.path.join("uploads/post/", filename)
 
 
