@@ -43,9 +43,27 @@ class CommentViewSet(
         return super().get_permissions()
 
     def get_queryset(self):
-        queryset = self.queryset
-        if self.action == "list":
-            queryset = self.queryset.filter(parent_comment__isnull=True)
+
+        queryset = self.queryset.filter(parent_comment__isnull=True)
+
+        nickname = self.request.query_params.get("nickname")
+        email = self.request.query_params.get("email")
+        if nickname:
+            queryset = queryset.filter(user_profile__nickname__icontains=nickname)
+        if email:
+            queryset = queryset.filter(user_profile__user__icontains=email)
+
+        ordering = self.request.query_params.get("ordering")
+        ordering_types = {"date": "created_at", 
+                          "nickname": "user_profile__nickname", 
+                          "email": "user_profile__user"}
+        if ordering and ordering.lstrip("-") in ordering_types:
+            if ordering.startswith("-"):
+                ordering = "-" + ordering_types[ordering.lstrip("-")]
+            else:
+                ordering = ordering_types[ordering]
+            queryset = queryset.order_by(ordering)
+
         return queryset
 
     def get_serializer_class(self):
@@ -93,6 +111,35 @@ class CommentViewSet(
         context["request"] = self.request
         return context
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="nickname",
+                description="Filter comments by user profile nickname (e.g., ?nickname=alice)",
+                required=False,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
+                name="email",
+                description="Filter comments by user email (e.g., ?email=user@example.com)",
+                required=False,
+                type=OpenApiTypes.STR,
+            ),
+            OpenApiParameter(
+                name="ordering",
+                description=(
+                    "Order comments by a specific field. "
+                    "Available options: `date` (created_at), `nickname` (user_profile__nickname), "
+                    "`email` (user_profile__user). Prefix with `-` for descending order "
+                    "(e.g., ?ordering=-date)."
+                ),
+                required=False,
+                type=OpenApiTypes.STR,
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 class CreateProfile(
     mixins.CreateModelMixin,
@@ -129,14 +176,12 @@ class UserProfileViewSet(
     )
     serializer_class = UserProfileSerializer
 
-
     def get_permissions(self):
-        if self.action in ["create","list", "retrieve"]:
+        if self.action in ["create", "list", "retrieve"]:
             return [IsAuthenticated()]
         if self.action in ["update", "partial_update", "destroy"]:
             return [IsAuthenticated(), CommentOwner()]
         return super().get_permissions()
-
 
     def get_queryset(self):
         """Retrieve the user's profiles with filter"""

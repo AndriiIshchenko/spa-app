@@ -20,6 +20,7 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
 
 
 class LogoutView(APIView):
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
     def post(self, request):

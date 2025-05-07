@@ -47,5 +47,8 @@ class Comment(models.Model):
     scheduled_time = models.DateTimeField(blank=True, null=True)
     is_published = models.BooleanField(default=False)
 
+    class Meta:
+        ordering = ["-created_at"]
+
     def __str__(self):
         return f"Comment to {self.parent_comment} by {self.user}"
