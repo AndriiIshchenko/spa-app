@@ -33,7 +33,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1:8001", "localhost", "127.0.0.1:8000", "127.0.0.1"]
+ALLOWED_HOSTS = ["3.65.6.190", "3.65.6.190:8000", "127.0.0.1:8001", "localhost", "127.0.0.1:8000", "127.0.0.1"]
 
 INTERNAL_IPS = ["127.0.0.1", "localhost"]
 
