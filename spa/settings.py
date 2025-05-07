@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "comments",
     "users",
     "drf_spectacular",
+    "corsheaders",
     # "debug_toolbar",
     "rest_framework_simplejwt.token_blacklist",
 ]
@@ -58,6 +59,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     # "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -88,22 +90,22 @@ WSGI_APPLICATION = "spa.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
 # DATABASES = {
 #     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": os.environ.get("POSTGRES_DB"),
-#         "USER": os.environ.get("POSTGRES_USER"),
-#         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-#         "HOST": os.environ.get("POSTGRES_HOST"),
-#         "PORT": os.environ.get("POSTGRES_PORT"),
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
 #     }
 # }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("POSTGRES_DB"),
+        "USER": os.environ.get("POSTGRES_USER"),
+        "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+        "HOST": os.environ.get("POSTGRES_HOST"),
+        "PORT": os.environ.get("POSTGRES_PORT"),
+    }
+}
 
 
 # Password validation
@@ -173,4 +175,20 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "App for posting comments",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+}
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6380/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "spa_app",
+    }
 }

@@ -1,3 +1,5 @@
+from django.core.cache import cache
+
 from rest_framework import mixins, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -6,7 +8,6 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-
 
 from comments.permissions import CommentOwner
 from comments.models import Comment, UserProfile
@@ -54,9 +55,11 @@ class CommentViewSet(
             queryset = queryset.filter(user_profile__user__icontains=email)
 
         ordering = self.request.query_params.get("ordering")
-        ordering_types = {"date": "created_at", 
-                          "nickname": "user_profile__nickname", 
-                          "email": "user_profile__user"}
+        ordering_types = {
+            "date": "created_at",
+            "nickname": "user_profile__nickname",
+            "email": "user_profile__user",
+        }
         if ordering and ordering.lstrip("-") in ordering_types:
             if ordering.startswith("-"):
                 ordering = "-" + ordering_types[ordering.lstrip("-")]
@@ -104,7 +107,10 @@ class CommentViewSet(
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        comment = serializer.save(user=self.request.user)
+        if comment.parent_comment is None:
+            cache_key = "comments_list:"
+            cache.delete_pattern(f"{cache_key}*")
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -115,13 +121,13 @@ class CommentViewSet(
         parameters=[
             OpenApiParameter(
                 name="nickname",
-                description="Filter comments by user profile nickname (e.g., ?nickname=alice)",
+                description="Filter comments by user nickname (e.g., ?nickname=alice)",
                 required=False,
                 type=OpenApiTypes.STR,
             ),
             OpenApiParameter(
                 name="email",
-                description="Filter comments by user email (e.g., ?email=user@example.com)",
+                description="Filter comments by user email (e.g., ?email=user@ex.com)",
                 required=False,
                 type=OpenApiTypes.STR,
             ),
@@ -129,8 +135,9 @@ class CommentViewSet(
                 name="ordering",
                 description=(
                     "Order comments by a specific field. "
-                    "Available options: `date` (created_at), `nickname` (user_profile__nickname), "
-                    "`email` (user_profile__user). Prefix with `-` for descending order "
+                    "Available options: `date` (created_at),"
+                    "`nickname` (user_profile__nickname), "
+                    "`email` (user_profile__user). Prefix with `-` for descending order"
                     "(e.g., ?ordering=-date)."
                 ),
                 required=False,
@@ -139,7 +146,16 @@ class CommentViewSet(
         ]
     )
     def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+        cache_key = f"comments_list:{request.GET.urlencode()}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            return Response(cached_data)
+
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, timeout=60 * 5)
+        return response
+
 
 class CreateProfile(
     mixins.CreateModelMixin,
