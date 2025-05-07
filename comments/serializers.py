@@ -1,22 +1,29 @@
+from typing import List
 from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
+from drf_spectacular.utils import extend_schema_field
+from drf_spectacular.types import OpenApiTypes
 
 from comments.models import Comment, UserProfile
 
 
 class CommentSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(many=False, read_only=True, slug_field="email")
+    user_profile = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="nickname"
+    )
 
     class Meta:
         model = Comment
-        fields = ("id", "user", "content", "created_at")
+        fields = ("id", "user_profile", "content", "created_at")
 
 
 class CommentListSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(many=False, read_only=True, slug_field="email")
+    user_profile = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="nickname"
+    )
     replies_count = serializers.SerializerMethodField()
 
-    def get_replies_count(self, obj):
+    def get_replies_count(self, obj) -> int:
         return obj.replies.count()  # Count the number of replies
 
     class Meta:
@@ -24,7 +31,7 @@ class CommentListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "parent_comment",
-            "user",
+            "user_profile",
             "content",
             "created_at",
             "replies_count",
@@ -32,13 +39,16 @@ class CommentListSerializer(serializers.ModelSerializer):
 
 
 class CommentDetailSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(many=False, read_only=True, slug_field="email")
+    user_profile = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="nickname"
+    )
     replies = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ("id", "parent_comment", "user", "content", "created_at", "replies")
+        fields = ("id", "parent_comment", "user_profile", "content", "created_at", "replies")
 
+    @extend_schema_field(OpenApiTypes.OBJECT)
     def get_replies(self, obj):
         # Get the request object
         request = self.context.get("request")
@@ -70,7 +80,7 @@ class UserProfileListSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = ("id", "nickname", "user", "photo", "comments")
 
-    def get_commentss(self, obj) -> int:
+    def get_comments(self, obj) -> int:
         return obj.comments.count()
 
 
@@ -89,7 +99,7 @@ class UserProfileDetailSerializer(serializers.ModelSerializer):
             "comments",
         ]
 
-    def get_comments(self, obj) -> list[str]:
+    def get_comments(self, obj) -> List[str]:
 
         comments = obj.comments.all()
         if not comments:
